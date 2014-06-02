@@ -203,6 +203,7 @@ void Platform::Init()
 	standbyTemperatures = STANDBY_TEMPERATURES;
 	activeTemperatures = ACTIVE_TEMPERATURES;
 	coolingFanPin = COOLING_FAN_PIN;
+  hotendFanPin = HOTEND_FAN_PIN;
 
 	webDir = WEB_DIR;
 	gcodeDir = GCODE_DIR;
@@ -835,7 +836,7 @@ void Platform::ClassReport(char* className, float &lastTime)
 // BETA is the B value
 // RS is the value of the series resistor in ohms
 // R_INF is R0.exp(-BETA/T0), where R0 is the thermistor resistance at T0 (T0 is in kelvin)
-// Normally T0 is 298.15K (25 C).  If you write that expression in brackets in the #define the compiler 
+// Normally T0 is 298.15K (25 C).  If you write that expression in brackets in the #define the compiler
 // should compute it for you (i.e. it won't need to be calculated at run time).
 
 // If the A->D converter has a range of 0..1023 and the measured voltage is V (between 0 and 1023)
@@ -1000,8 +1001,22 @@ void Platform::CoolingFan(float speed)
 	if(coolingFanPin > 0)
 	{
 		// The cooling fan output pin gets inverted if HEAT_ON == 0
-		analogWriteNonDue(coolingFanPin, (uint32_t)( (HEAT_ON == 0) ? (255.0 - speed) : speed));
+		//analogWriteNonDue(coolingFanPin, (uint32_t)( (HEAT_ON == 0) ? (255.0 - speed) : speed));
+
+    //We are using a plain non-inverting pwm output pin for the fan
+    analogWriteNonDue(coolingFanPin, (uint32_t)(speed));
 	}
+}
+
+//Turn on or off hotend cooling fan
+void Platform::HotendFan(bool state)
+{
+  if(hotendFanPin > 0)
+  {
+    uint_32_t fanvalue = state?255:0;
+    fanvalue = HEAT_ON==0?(255-fanvalue):fanvalue;
+    analogWriteNonDue(hotendFanPin, fanvalue);
+  }
 }
 
 // Interrupts

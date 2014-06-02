@@ -3,7 +3,7 @@
 RepRapFirmware - Configuration
 
 This is where all machine-independent configuration and other definitions are set up.  Nothing that
-depends on any particular RepRap, RepRap component, or RepRap controller  should go in here.  Define 
+depends on any particular RepRap, RepRap component, or RepRap controller  should go in here.  Define
 machine-dependent things in Platform.h
 
 -----------------------------------------------------------------------------------------------------
@@ -24,9 +24,9 @@ Licence: GPL
 #define CONFIGURATION_H
 
 #define NAME "RepRapFirmware"
-#define VERSION "0.59d-dc42"
-#define DATE "2014-05-28"
-#define LAST_AUTHOR "dc42"
+#define VERSION "0.59d-js"
+#define DATE "2014-06-02"
+#define LAST_AUTHOR "jstck"
 
 // Other firmware that we might switch to be compatible with.
 

@@ -35,6 +35,7 @@ class Webserver;
 class GCodes;
 class Move;
 class Heat;
+class Fan;
 class RepRap;
 class FileStore;
 
@@ -69,6 +70,7 @@ extern char scratchString[];
 #include "GCodes.h"
 #include "Move.h"
 #include "Heat.h"
+#include "Fan.h"
 #include "Reprap.h"
 
 // std::min and std::max don't seem to work with this variant of gcc, so define our own ones here
@@ -108,6 +110,3 @@ template<> inline double max(double _a, double _b)
 }
 
 #endif
-
-
-

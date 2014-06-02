@@ -2,7 +2,7 @@
 
 RepRapFirmware - Platform: RepRapPro Mendel with Duet controller
 
-Platform contains all the code and definitons to deal with machine-dependent things such as control 
+Platform contains all the code and definitons to deal with machine-dependent things such as control
 pins, bed area, number of extruders, tolerable accelerations and speeds and so on.
 
 No definitions that are system-independent should go in here.  Put them in Configuration.h.  Note that
@@ -77,13 +77,13 @@ Licence: GPL
 
 #define STEP_PINS {14, 25, 5, X2}
 #define DIRECTION_PINS {15, 26, 4, X3}
-#define FORWARDS true     // What to send to go... 
+#define FORWARDS true     // What to send to go...
 #define BACKWARDS false    // ...in each direction
 #define ENABLE_PINS {29, 27, X1, X0}
-#define ENABLE false      // What to send to enable... 
+#define ENABLE false      // What to send to enable...
 #define DISABLE true     // ...and disable a drive
 #define DISABLE_DRIVES {false, false, true, false} // Set true to disable a drive when it becomes idle
-#define LOW_STOP_PINS {11, 28, 60, 31}
+#define LOW_STOP_PINS {11, 28, 60, 31} //X and Y endstops are used for both low and high
 #define HIGH_STOP_PINS {11, 28, -1, -1}
 #define ENDSTOP_HIT 1 // when a stop == this it is hit
 #define POT_WIPES {1, 3, 2, 0} // Indices for motor current digipots (if any)
@@ -165,7 +165,13 @@ const float defaultPidMax[HEATERS] = {255, 180};	// maximum value of I-term, mus
 
 #define STANDBY_TEMPERATURES {ABS_ZERO, ABS_ZERO} // We specify one for the bed, though it's not needed
 #define ACTIVE_TEMPERATURES {ABS_ZERO, ABS_ZERO}
-#define COOLING_FAN_PIN X6
+#define COOLING_FAN_PIN 7 //Fan controlled by M106 command
+
+#define HOTEND_FAN_PIN X6 //Temperature-controlled hotend cooling fan
+
+#define HOTEND_FAN_TEMP_ON 50.0
+#define HOTEND_FAN_TEMP_OFF 40.0
+
 #define HEAT_ON 0 // 0 for inverted heater (e.g. Duet v0.6) 1 for not (e.g. Duet v0.4)
 
 // For the theory behind ADC oversampling, see http://www.atmel.com/Images/doc8003.pdf
@@ -346,11 +352,11 @@ protected:
 	FileStore(Platform* p);
 	void Init();
     bool Open(const char* directory, const char* fileName, bool write);
-        
+
   bool inUse;
   byte buf[FILE_BUF_LEN];
   int bufferPointer;
-  
+
 private:
 
   bool ReadBuffer();
@@ -497,17 +503,17 @@ enum ErrorCode
 // The main class that defines the RepRap machine for the benefit of the other classes
 
 class Platform
-{   
+{
 public:
-  
+
   Platform();
-  
+
 //-------------------------------------------------------------------------------------------------------------
 
 // These are the functions that form the interface between Platform and the rest of the firmware.
 
   void Init(); // Set the machine up after a restart.  If called subsequently this should set the machine up as if
-               // it has just been restarted; it can do this by executing an actual restart if you like, but beware the 
+               // it has just been restarted; it can do this by executing an actual restart if you like, but beware the
                // loop of death...
   void Spin(); // This gets called in the main loop and should do any housekeeping needed
   void Exit(); // Shut down tidily.  Calling Init after calling this should reset to the beginning
@@ -522,14 +528,14 @@ public:
   void SetAtxPower(bool on);
 
   // Timing
-  
+
   float Time(); // Returns elapsed seconds since some arbitrary time
   void SetInterrupt(float s); // Set a regular interrupt going every s seconds; if s is -ve turn interrupt off
   void DisableInterrupts();
   void Tick();
 
   // Communications and data storage
-  
+
   Line* GetLine() const;
   void SetIPAddress(byte ip[]);
   const byte* IPAddress() const;
@@ -537,9 +543,9 @@ public:
   const byte* NetMask() const;
   void SetGateWay(byte gw[]);
   const byte* GateWay() const;
-  
+
   friend class FileStore;
-  
+
   MassStorage* GetMassStorage();
   FileStore* GetFileStore(const char* directory, const char* fileName, bool write);
   const char* GetWebDir() const; // Where the htm etc files are
@@ -547,14 +553,14 @@ public:
   const char* GetSysDir() const;  // Where the system files are
   const char* GetTempDir() const; // Where temporary files are
   const char* GetConfigFile() const; // Where the configuration is stored (in the system dir).
-  
+
   void Message(char type, const char* message);        // Send a message.  Messages may simply flash an LED, or,
                             // say, display the messages on an LCD. This may also transmit the messages to the host.
   void PushMessageIndent();
   void PopMessageIndent();
-  
+
   // Movement
-  
+
   void EmergencyStop();
   void SetDirection(byte drive, bool direction);
   void Step(byte drive);
@@ -589,18 +595,19 @@ public:
   bool MustHomeXYBeforeZ() const;
 
   // Heat and temperature
-  
+
   float GetTemperature(size_t heater) const; // Result is in degrees Celsius
   void SetHeater(size_t heater, const float& power); // power is a fraction in [0,1]
   float HeatSampleTime() const;
   void CoolingFan(float speed);
+	void HotendFan(bool state);
   void SetPidParameters(size_t heater, const PidParameters& params);
   const PidParameters& GetPidParameters(size_t heater);
 
 //-------------------------------------------------------------------------------------------------------
-  
+
 private:
-  
+
   // This is the structure used to hold out non-volatile data.
   // The SAM3X doesn't have EEPROM so we save the data to flash. This unfortunately means that it gets cleared
   // every time we reprogram the firmware. So there is no need to cater for writing one version of this
@@ -634,10 +641,10 @@ private:
   float longWait;
   float addToTime;
   unsigned long lastTimeCall;
-  
+
   bool active;
   uint32_t errorCodeBits;
-  
+
   void InitialiseInterrupts();
   int GetRawZHeight() const;
   void GetStackUsage(size_t* currentStack, size_t* maxStack, size_t* neverUsed) const;
@@ -651,7 +658,7 @@ private:
   bool driveEnabled[DRIVES];
   int8_t lowStopPins[DRIVES];
   int8_t highStopPins[DRIVES];
-  float maxFeedrates[DRIVES];  
+  float maxFeedrates[DRIVES];
   float accelerations[DRIVES];
   float driveStepsPerUnit[DRIVES];
   float instantDvs[DRIVES];
@@ -676,7 +683,7 @@ private:
   float axisMinima[AXES];
   float homeFeedrates[AXES];
   float headOffsets[AXES]; // FIXME - needs a 2D array
-  
+
 // HEATERS - Bed is assumed to be the first
 
   int GetRawTemperature(byte heater) const;
@@ -687,6 +694,7 @@ private:
   float standbyTemperatures[HEATERS];
   float activeTemperatures[HEATERS];
   int8_t coolingFanPin;
+	int8_t hotendFanPin;
 
 // Serial/USB
 
@@ -703,7 +711,7 @@ private:
   char* sysDir;
   char* tempDir;
   char* configFile;
-  
+
 // Data used by the tick interrupt handler
 
   adc_channel_num_t heaterAdcChannels[HEATERS];
@@ -841,7 +849,7 @@ inline const char* Platform::GetConfigFile() const
 
 inline float Platform::DriveStepsPerUnit(int8_t drive) const
 {
-  return driveStepsPerUnit[drive]; 
+  return driveStepsPerUnit[drive];
 }
 
 inline void Platform::SetDriveStepsPerUnit(int8_t drive, float value)
@@ -861,7 +869,7 @@ inline void Platform::SetAcceleration(int8_t drive, float value)
 
 inline float Platform::InstantDv(int8_t drive) const
 {
-  return instantDvs[drive]; 
+  return instantDvs[drive];
 }
 
 #if 0	// not used

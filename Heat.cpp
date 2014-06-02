@@ -35,7 +35,7 @@ void Heat::Init()
     pids[heater]->Init();
   lastTime = platform->Time();
   longWait = lastTime;
-  active = true; 
+  active = true;
 }
 
 void Heat::Exit()
@@ -48,7 +48,7 @@ void Heat::Spin()
 {
   if(!active)
     return;
-    
+
   float t = platform->Time();
   if(t - lastTime < platform->HeatSampleTime())
     return;
@@ -58,9 +58,9 @@ void Heat::Spin()
   platform->ClassReport("Heat", longWait);
 }
 
-void Heat::Diagnostics() 
+void Heat::Diagnostics()
 {
-  platform->Message(HOST_MESSAGE, "Heat Diagnostics:\n"); 
+  platform->Message(HOST_MESSAGE, "Heat Diagnostics:\n");
 }
 
 bool Heat::AllHeatersAtSetTemperatures() const
@@ -112,7 +112,7 @@ void PID::Spin()
   }
 
   temperature = platform->GetTemperature(heater);
-  
+
   if(temperature < BAD_LOW_TEMPERATURE || temperature > BAD_HIGH_TEMPERATURE)
   {
 	  badTemperatureCount++;
@@ -131,13 +131,13 @@ void PID::Spin()
 
   float error = ((active) ? activeTemperature : standbyTemperature) - temperature;
   const PidParameters& pp = platform->GetPidParameters(heater);
-  
+
   if(!pp.UsePID())
   {
     platform->SetHeater(heater, (error > 0.0) ? 1.0 : 0.0);
-    return; 
+    return;
   }
-  
+
   if(error < -pp.fullBand)
   {
      temp_iState = 0.0;
@@ -151,13 +151,13 @@ void PID::Spin()
      platform->SetHeater(heater, 1.0);
      lastTemperature = temperature;
      return;
-  }  
-   
+  }
+
   temp_iState += error * pp.kI;
-  
+
   if (temp_iState < pp.pidMin) temp_iState = pp.pidMin;
   else if (temp_iState > pp.pidMax) temp_iState = pp.pidMax;
-   
+
   float temp_dState =  pp.kD * (temperature - lastTemperature);
   float result = pp.kP * error + temp_iState - temp_dState;
 

@@ -22,9 +22,9 @@ Licence: GPL
 #define REPRAP_H
 
 class RepRap
-{    
+{
   public:
-      
+
     RepRap();
     void EmergencyStop();
     void Init();
@@ -43,13 +43,14 @@ class RepRap
     void Tick();
     bool IsStopped() const;
     uint16_t GetTicksInSpinState() const;
-    
+
   private:
-  
+
     Platform* platform;
     Network* network;
     Move* move;
     Heat* heat;
+    Fan* fan;
     GCodes* gCodes;
     Webserver* webserver;
     uint16_t ticksInSpinState;
@@ -73,5 +74,3 @@ inline uint16_t RepRap::GetTicksInSpinState() const { return ticksInSpinState; }
 
 
 #endif
-
-

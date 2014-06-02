@@ -165,6 +165,7 @@ RepRap::RepRap() : active(false), debug(false), stopped(false), spinState(0), ti
   gCodes = new GCodes(platform, webserver);
   move = new Move(platform, gCodes);
   heat = new Heat(platform, gCodes);
+  fan = new Fan(platform, gCodes);
 }
 
 void RepRap::Init()
@@ -177,6 +178,7 @@ void RepRap::Init()
   webserver->Init();
   move->Init();
   heat->Init();
+  fan->Init(HOTEND_FAN_TEMP_ON, HOTEND_FAN_TEMP_OFF);
 
   const uint32_t wdtTicks = 256;	// number of watchdog ticks @ 32768Hz/128 before the watchdog times out (max 4095)
   WDT_Enable(WDT, (wdtTicks << WDT_MR_WDV_Pos) | (wdtTicks << WDT_MR_WDD_Pos) | WDT_MR_WDRSTEN);	// enable watchdog, reset the mcu if it times out
@@ -240,6 +242,10 @@ void RepRap::Spin()
 	++spinState;
 	ticksInSpinState = 0;
 	heat->Spin();
+
+  ++spinState;
+  ticksInSpinState = 0;
+  fan->Spin();
 
 	spinState = 0;
 	ticksInSpinState = 0;
@@ -468,14 +474,3 @@ int StringContains(const char* string, const char* match)
 
   return -1;
 }
-
-
-
-
-
-
-
-
-
-
-
