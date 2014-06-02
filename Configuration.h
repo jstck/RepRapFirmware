@@ -24,7 +24,7 @@ Licence: GPL
 #define CONFIGURATION_H
 
 #define NAME "RepRapFirmware"
-#define VERSION "0.59d-js"
+#define VERSION "0.59e-js"
 #define DATE "2014-06-02"
 #define LAST_AUTHOR "jstck"
 
