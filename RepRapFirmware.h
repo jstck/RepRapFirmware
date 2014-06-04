@@ -36,6 +36,7 @@ class GCodes;
 class Move;
 class Heat;
 class Fan;
+class Tool;
 class RepRap;
 class FileStore;
 
@@ -71,6 +72,7 @@ extern char scratchString[];
 #include "Move.h"
 #include "Heat.h"
 #include "Fan.h"
+#include "Tool.h"
 #include "Reprap.h"
 
 // std::min and std::max don't seem to work with this variant of gcc, so define our own ones here
