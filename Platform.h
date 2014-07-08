@@ -57,7 +57,7 @@ Licence: GPL
 
 // Some numbers...
 
-#define STRING_LENGTH 1029		// needs to be long enough to receive web data
+#define STRING_LENGTH 1029
 #define SHORT_STRING_LENGTH 40
 #define TIME_TO_REPRAP 1.0e6 	// Convert seconds to the units used by the machine (usually microseconds)
 #define TIME_FROM_REPRAP 1.0e-6 // Convert the units used by the machine (usually microseconds) to seconds
@@ -208,7 +208,6 @@ const unsigned int adDisconnectedVirtual = adDisconnectedReal << adOversampleBit
 #define GCODE_DIR "0:/gcodes/" 					// Ditto - g-codes
 #define SYS_DIR "0:/sys/" 						// Ditto - system files
 #define TEMP_DIR "0:/tmp/" 						// Ditto - temporary files
-#define FILE_LIST_LENGTH (1000) 				// Maximum length of file list
 
 #define FLASH_LED 'F' 							// Type byte of a message that is to flash an LED; the next two bytes define
                       	  	  	  	  	  	  	// the frequency and M/S ratio.
@@ -230,6 +229,7 @@ const int atxPowerPin = 12;						// Arduino Due pin number that controls the ATX
 const uint16_t lineInBufsize = 256;				// use a power of 2 for good performance
 const uint16_t lineOutBufSize = 2048;			// ideally this should be large enough to hold the results of an M503 command,
 												// but could be reduced if we ever need the memory
+const uint16_t fileListLength = 2000;			// increased to allow for the larger size of the Unix-compatible list when using FTP
 
 /****************************************************************************************************/
 
@@ -319,8 +319,14 @@ class MassStorage
 public:
 
   const char* FileList(const char* directory, bool fromLine); // Returns a list of all the files in the named directory
+  const char* UnixFileList(const char* directory); // Returns a UNIX-compatible file list for the specified directory
   const char* CombineName(const char* directory, const char* fileName);
   bool Delete(const char* directory, const char* fileName);
+  bool Delete(const char* fileName);
+  bool MakeDirectory(const char *parentDir, const char *dirName);
+  bool MakeDirectory(const char *directory);
+  bool Rename(const char *oldFilename, const char *newFilename);
+  bool PathExists(const char *path) const;
 
 friend class Platform;
 
@@ -331,7 +337,7 @@ protected:
 
 private:
 
-  char fileList[FILE_LIST_LENGTH];
+  char fileList[fileListLength];
   char scratchString[STRING_LENGTH];
   Platform* platform;
   FATFS fileSystem;
@@ -363,7 +369,8 @@ protected:
 	FileStore(Platform* p);
 	void Init();
     bool Open(const char* directory, const char* fileName, bool write);
-
+    bool Open(const char* fileName, bool write);
+        
   bool inUse;
   byte buf[FILE_BUF_LEN];
   int bufferPointer;
@@ -561,6 +568,7 @@ public:
 
   MassStorage* GetMassStorage();
   FileStore* GetFileStore(const char* directory, const char* fileName, bool write);
+  FileStore* GetFileStore(const char* fileName, bool write);
   const char* GetWebDir() const; // Where the htm etc files are
   const char* GetGCodeDir() const; // Where the gcodes are
   const char* GetSysDir() const;  // Where the system files are

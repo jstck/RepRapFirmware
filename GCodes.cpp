@@ -92,7 +92,10 @@ void GCodes::Reset()
 	cannedCycleMoveQueued = false;
 	gFeedRate = platform->MaxFeedrate(Z_AXIS); // Typically the slowest
     speedFactor = 1.0/60.0;				// default is just to convert from mm/minute to mm/second
-    extrusionFactor = 1.0;
+    for (size_t i = 0; i < DRIVES - AXES; ++i)
+    {
+    	extrusionFactors[i] = 1.0;
+    }
 }
 
 void GCodes::DoFilePrint(GCodeBuffer* gb)
@@ -392,7 +395,7 @@ void GCodes::LoadMoveBufferFromGCode(GCodeBuffer *gb, bool doingG92, bool applyL
 	       *  		would leave the move buffer on a 4 extruder drive setup looking like this:
 	       *  		{x.x, y.y, z.z, 0.0, 0.0, 0.0, n.n,m.m, f.f}
 	       */
-	      if(gb->Seen('E')&& ((i-AXES) == selectedHead-1))
+	      if(gb->Seen('E') && ((i-AXES) == selectedHead-1))
 	      {
 	    	//the number of mixing drives set (by M160)
 	    	int numDrives = platform->GetMixingDrives();
@@ -410,7 +413,7 @@ void GCodes::LoadMoveBufferFromGCode(GCodeBuffer *gb, bool doingG92, bool applyL
 	    		}
 	    		if(extruderString[sp] == ':')
 	    		{
-	    			eArg[hp] = (atoff(&extruderString[fp]))*distanceScale;
+	    			eArg[hp] = (atoff(&extruderString[fp])) * distanceScale * extrusionFactors[hp];
 	    			hp++;
 	    			if(hp >= numDrives)
 	    			{
@@ -428,7 +431,7 @@ void GCodes::LoadMoveBufferFromGCode(GCodeBuffer *gb, bool doingG92, bool applyL
 	    		}
 	    	}
 	    	//capture the last drive step amount in the string (or the only one in the case of only one extruder)
-	    	eArg[hp] = (atoff(&extruderString[fp])) * distanceScale * extrusionFactor;
+	    	eArg[hp] = (atoff(&extruderString[fp])) * distanceScale * extrusionFactors[hp];
 
 	    	//set the move buffer for each extruder drive
         	for(int j=0;j<numDrives;j++)
@@ -1026,7 +1029,7 @@ bool GCodes::SetPrintZProbe(GCodeBuffer* gb, char* reply)
 
 //Fixed to deal with multiple extruders
 
-char* GCodes::GetCurrentCoordinates()
+const char* GCodes::GetCurrentCoordinates()
 {
 	float liveCoordinates[DRIVES + 1];
 	reprap.GetMove()->LiveCoordinates(liveCoordinates);
@@ -1269,7 +1272,9 @@ bool GCodes::StandbyHeaters()
 	if (!AllMovesAreFinishedAndMoveBufferIsLoaded())
 		return false;
 	for (int8_t heater = 0; heater < HEATERS; heater++)
+	{
 		reprap.GetHeat()->Standby(heater);
+	}
 	selectedHead = -1; //FIXME check this does not mess up setters (eg M906) when they are used after this command is called
 	return true;
 }
@@ -1846,7 +1851,7 @@ bool GCodes::HandleMcode(GCodeBuffer* gb)
 						seen=true;
 					}
 				}
-				else if(gb->Seen('E')&& ((drive-AXES) == selectedHead - 1))//then do active extruder
+				else if(gb->Seen('E') && ((drive-AXES) == selectedHead - 1))//then do active extruder
 				{
 						platform->SetDriveStepsPerUnit(AXES+selectedHead - 1, gb->GetFValue());
 						seen=true;
@@ -1879,7 +1884,7 @@ bool GCodes::HandleMcode(GCodeBuffer* gb)
 		break;
 
 	case 104: // Deprecated
-    	if(gb->Seen('S') && selectedHead >= 0)
+    	if(gb->Seen('S') && selectedHead >= 0 && selectedHead < HEATERS)
 		{
 			//only sets the selected head (As set by T#)
     		reprap.GetHeat()->SetActiveTemperature(selectedHead, gb->GetFValue()); // 0 is the bed
@@ -1923,13 +1928,12 @@ bool GCodes::HandleMcode(GCodeBuffer* gb)
 		break;
 
 	case 109: 	// Set extruder temperature and wait - deprecated
-    	if(gb->Seen('S') && selectedHead >= 0)
+    	if(gb->Seen('S') && selectedHead >= 0 && selectedHead < HEATERS)
     	{
     		reprap.GetHeat()->SetActiveTemperature(selectedHead, gb->GetFValue()); // 0 is the bed
     		reprap.GetHeat()->Activate(selectedHead);
+        	result = reprap.GetHeat()->HeaterAtSetTemperature(selectedHead);
     	}
-    	//check here rather than falling through to M116, we want to just wait for the extruder we specified (otherwise use M116 not M109)
-    	result = reprap.GetHeat()->HeaterAtSetTemperature(selectedHead);
     	break;
 
 	case 110: // Set line numbers - line numbers are dealt with in the GCodeBuffer class
@@ -2026,7 +2030,6 @@ bool GCodes::HandleMcode(GCodeBuffer* gb)
     	{
 			float value=gb->GetFValue();
 			reprap.GetHeat()->SetActiveTemperature(0, value);
-			reprap.GetHeat()->SetStandbyTemperature(0, value); // FIXME have to set both?not sure as the bed should always be selected
 			reprap.GetHeat()->Activate(0);
     	}
     	result = reprap.GetHeat()->HeaterAtSetTemperature(0);
@@ -2145,14 +2148,33 @@ bool GCodes::HandleMcode(GCodeBuffer* gb)
 	case 220:	// set speed factor override percentage
 		if (gb->Seen('S'))
 		{
-			speedFactor = gb->GetFValue()/(60 * 100.0);		// include the conversion from mm/minute to mm/second
+			float newSpeedFactor = gb->GetFValue()/(60 * 100.0);		// include the conversion from mm/minute to mm/second
+			if (newSpeedFactor > 0)
+			{
+				gFeedRate *= newSpeedFactor/speedFactor;
+				speedFactor = newSpeedFactor;
+			}
 		}
 		break;
 
 	case 221:	// set extrusion factor override percentage
-		if (gb->Seen('S'))
+		//FIXME: need to allow multiple colon-separated parameters for mixing extruders
+		if (gb->Seen('S'))	// S parameter sets the override percentage
 		{
-			extrusionFactor = gb->GetFValue()/100.0;
+			float extrusionFactor = gb->GetFValue()/100.0;
+			int head;
+			if (gb->Seen('P'))	// P parameter (if present) selects the head
+			{
+				head = gb->GetIValue();
+			}
+			else
+			{
+				head = selectedHead;
+			}
+			if (head >= 1 && head < DRIVES - AXES + 1 && extrusionFactor >= 0)
+			{
+				extrusionFactors[head - 1] = extrusionFactor;
+			}
 		}
 		break;
 

@@ -46,7 +46,12 @@ extern RepRap reprap;
 
 // Functions and globals not part of any class
 
+<<<<<<< HEAD
 void debugPrintf(const char* fmt, ...);
+=======
+extern "C" void debugPrintf(const char* fmt, ...);
+
+>>>>>>> dc42/duet
 int sncatf(char *dst, size_t len, const char* fmt, ...);
 #if 0	// no longer used
 char* ftoa(char *a, const float& f, int prec);
