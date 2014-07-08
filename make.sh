@@ -58,6 +58,12 @@ BOSSAC_OPTIONS=(
     ${RELEASE}/${FIRMWARE}.bin
 )
 
+# Which lsusb?
+if [ ! -f lsusb ]
+    then LSUSB=lsusb
+    else LSUSB=./lsusb
+fi
+
 # Check if there are script parameters:
 #
 # - Supports 'clean' to remove the build output.
@@ -90,10 +96,10 @@ then
             echo
             exit
         fi
-    
+
         # Search for the Arduino device.
-        lsusb -d 2341:003e &> /dev/null
-        
+        ${LSUSB} -d 2341:003e &> /dev/null
+
         # Arduino found?
         if [ $? != 1 ]
         then
@@ -104,7 +110,7 @@ then
         else
             # Arduino not found! And Atmel?
             lsusb -d 03eb:6124 &> /dev/null
-            
+
             # Also missing?
             if [ $? == 1 ]
             then
@@ -114,13 +120,13 @@ then
                 echo
                 exit
             fi
-        fi        
+        fi
 
         while true
         do
             # Search for the Atmel device.
             lsusb -d 03eb:6124 &> /dev/null
-        
+
             # Found it?
             if [ $? != 1 ]
             then
@@ -133,7 +139,7 @@ then
                 break
             fi
         done
-        
+
         while true
         do
             # Show why we are waiting, it can take 30 seconds!
@@ -332,6 +338,9 @@ mkdir -p ${BUILD} ${RELEASE}
 # Locate and compile all the .c files that need to be compiled.
 for file in $(find ${FIRMWARE_PATH} ${ARDUINO}/hardware/arduino/sam/cores -type f -name "*.c")
 do
+    # Only compile the patch files that have been installed.
+    if [[ $file == *ArduinoCorePatches* ]]; then continue; fi
+
     # Intermediate build output.
     D=${BUILD}/$(basename $file).d
     O=${BUILD}/$(basename $file).o
@@ -349,6 +358,9 @@ done
 # Locate and compile all the .cpp files that need to be compiled.
 for file in $(find ${FIRMWARE_PATH} ${ARDUINO}/hardware/arduino/sam -type f -name "*.cpp")
 do
+    # Only compile the patch files that have been installed.
+    if [[ $file == *ArduinoCorePatches* ]]; then continue; fi
+
     # Intermediate build output.
     D=${BUILD}/$(basename $file).d
     O=${BUILD}/$(basename $file).o
@@ -373,4 +385,3 @@ echo
 echo "Created ${RELEASE}/${FIRMWARE}.bin"
 echo "You can run '$0 install' to upload the file."
 echo
-
